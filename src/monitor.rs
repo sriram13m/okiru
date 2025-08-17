@@ -1,9 +1,12 @@
 use std::fmt::write;
+use std::time::Duration;
 use objc2::runtime::AnyObject;
 use objc2::{msg_send, ClassType};
 use objc2_foundation::NSString;
 use objc2_app_kit::{NSWorkspace, NSRunningApplication};
+use objc2_core_foundation::{CFRunLoop, kCFRunLoopDefaultMode};
 
+//App Info
 #[derive(Debug)]
 pub struct AppInfo {
     pub app_name: String,
@@ -11,6 +14,18 @@ pub struct AppInfo {
     pub bundle_id: String,
     pub process_id: i32,
 }
+
+impl std::fmt::Display for AppInfo {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(f, "App: {} | Window: {} | Bundle: {} | PID: {}",
+             self.app_name,
+             self.window_title,
+             self.bundle_id,
+             self.process_id)
+  }
+}
+
+//MonitorError
 
 #[derive(Debug)]
 pub enum MonitorError {
@@ -29,6 +44,8 @@ impl std::fmt::Display for MonitorError {
 
 impl std::error::Error for MonitorError {}
 
+//Utils 
+//
 unsafe fn nsstring_to_string(ns_string_ptr: *const NSString, fallback: &str) -> String {
     if ns_string_ptr.is_null() {
         fallback.to_string()
@@ -57,10 +74,46 @@ fn frontmost_application_to_app_info(frontmost_application: Option<objc2::rc::Re
     }
 }
 
+//Get Active Window Function
+
 pub fn get_active_window() -> Result<AppInfo, MonitorError> {
     unsafe {
         let workspace = NSWorkspace::sharedWorkspace();
         let frontmost_application = msg_send![&*workspace, frontmostApplication];
         frontmost_application_to_app_info(frontmost_application)
+    }
+}
+
+//Monitoring Function
+//Utils
+
+#[derive(Debug, Clone)]
+pub struct MonitorConfig {
+    pub poll_interval_ms: u64,
+    pub runloop_timeout: f64,
+}
+
+impl Default for MonitorConfig {
+    fn default() -> Self {
+        Self { poll_interval_ms: 1000, runloop_timeout: 0.1 }
+    }
+}
+
+
+//Function
+pub fn start_monitoring<F>(config: MonitorConfig,callback: F) -> Result<(), MonitorError> 
+where F: Fn(AppInfo), 
+{
+    loop {
+        match get_active_window() {
+           Ok(app_info) => callback(app_info),
+           Err(e) => eprintln!("Monitor error: {}", e),
+        }
+
+    unsafe {
+        CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, config.runloop_timeout, true);
+    }
+
+    std::thread::sleep(Duration::from_millis(config.poll_interval_ms));
     }
 }
