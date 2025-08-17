@@ -9,3 +9,6 @@ objc2 = "0.6.2"
 objc2-app-kit = "0.3.1"
 objc2-core-foundation = "0.3.1"
 objc2-foundation = "0.3.1"
+serde = "1.0.219"
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite"] }
+tokio = "1.47.1"
