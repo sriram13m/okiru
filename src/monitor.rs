@@ -5,6 +5,9 @@ use objc2::{msg_send, ClassType};
 use objc2_foundation::NSString;
 use objc2_app_kit::{NSWorkspace, NSRunningApplication};
 use objc2_core_foundation::{CFRunLoop, kCFRunLoopDefaultMode};
+use tokio::task::try_id;
+
+use crate::ActivityLogger;
 
 //App Info
 #[derive(Debug)]
@@ -101,19 +104,38 @@ impl Default for MonitorConfig {
 
 
 //Function
-pub fn start_monitoring<F>(config: MonitorConfig,callback: F) -> Result<(), MonitorError> 
-where F: Fn(AppInfo), 
+pub async fn start_monitoring<F>(config: MonitorConfig, mut logger: ActivityLogger, callback: F) -> Result<(), MonitorError> 
+where F: Fn(&AppInfo),
 {
+    let mut last_application: Option<AppInfo> = None;
+
     loop {
         match get_active_window() {
-           Ok(app_info) => callback(app_info),
-           Err(e) => eprintln!("Monitor error: {}", e),
+            Ok(current_application) => {
+                callback(&current_application);
+
+                let app_changed = match &last_application {
+                    None => true,
+                    Some(last) => last.bundle_id != current_application.bundle_id,
+                };
+
+                if app_changed {
+                    if let Err(e) = logger.start_session(&current_application).await {
+                        eprintln!("Storage error: {}", e);
+                    }
+
+                    last_application = Some(current_application);
+                }
+            }
+            Err(e) => eprintln!("Error while monitoring: {}", e),
+            
         }
 
-    unsafe {
-        CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, config.runloop_timeout, true);
-    }
+        tokio::time::sleep(Duration::from_millis(config.poll_interval_ms)).await;
 
-    std::thread::sleep(Duration::from_millis(config.poll_interval_ms));
+        unsafe {
+            CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, config.runloop_timeout, true);
+        }
     }
+    
 }
