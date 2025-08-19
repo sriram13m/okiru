@@ -147,7 +147,6 @@ Please evaluate how well this current activity aligns with the user's intention.
     }
 
     fn parse_alignment_response(&self, response: &str) -> Result<AlignmentEvaluation, OllamaError> {
-        // Try to find JSON in the response (sometimes models add extra text)
         let json_start = response.find('{').unwrap_or(0);
         let json_end = response.rfind('}').map(|i| i + 1).unwrap_or(response.len());
         let json_str = &response[json_start..json_end];

@@ -1,0 +1,64 @@
+{
+  "test_cases": [
+    {
+      "name": "Perfect Alignment - Rust Learning",
+      "description": "Coding Rust when intention is to learn Rust",
+      "intention": "I want to learn Rust programming for 2 hours today",
+      "app": {
+        "app_name": "Visual Studio Code",
+        "window_title": "main.rs - okiru",
+        "bundle_id": "com.microsoft.VSCode",
+        "process_id": 12345
+      },
+      "expected_score_range": [0.8, 1.0]
+    },
+    {
+      "name": "Good Alignment - Educational Content",
+      "description": "Reading Rust documentation",
+      "intention": "I want to learn Rust programming for 2 hours today",
+      "app": {
+        "app_name": "Brave Browser",
+        "window_title": "The Rust Programming Language - Official Book",
+        "bundle_id": "com.brave.Browser",
+        "process_id": 23456
+      },
+      "expected_score_range": [0.6, 0.9]
+    },
+    {
+      "name": "Poor Alignment - Entertainment vs Work",
+      "description": "Watching videos during work time",
+      "intention": "I want to focus on work and finish my quarterly report",
+      "app": {
+        "app_name": "YouTube",
+        "window_title": "Funny Cat Videos Compilation 2024",
+        "bundle_id": "com.google.android.youtube",
+        "process_id": 34567
+      },
+      "expected_score_range": [0.0, 0.3]
+    },
+    {
+      "name": "Moderate Alignment - Related Tools",
+      "description": "Using terminal for Rust development",
+      "intention": "I want to learn Rust programming for 2 hours today",
+      "app": {
+        "app_name": "Terminal",
+        "window_title": "cargo build --release",
+        "bundle_id": "com.apple.Terminal",
+        "process_id": 45678
+      },
+      "expected_score_range": [0.5, 0.8]
+    },
+    {
+      "name": "Context-Dependent - Break Time",
+      "description": "Taking a planned break",
+      "intention": "I want to take a 15-minute break and then get back to studying",
+      "app": {
+        "app_name": "Twitter",
+        "window_title": "Home Timeline - Twitter",
+        "bundle_id": "com.twitter.twitter-mac",
+        "process_id": 56789
+      },
+      "expected_score_range": [0.4, 0.8]
+    }
+  ]
+}
