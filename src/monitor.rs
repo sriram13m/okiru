@@ -1,10 +1,10 @@
+use objc2::runtime::AnyObject;
+use objc2::{ClassType, msg_send};
+use objc2_app_kit::{NSRunningApplication, NSWorkspace};
+use objc2_core_foundation::{CFRunLoop, kCFRunLoopDefaultMode};
+use objc2_foundation::NSString;
 use std::fmt::write;
 use std::time::Duration;
-use objc2::runtime::AnyObject;
-use objc2::{msg_send, ClassType};
-use objc2_foundation::NSString;
-use objc2_app_kit::{NSWorkspace, NSRunningApplication};
-use objc2_core_foundation::{CFRunLoop, kCFRunLoopDefaultMode};
 use tokio::task::try_id;
 
 use crate::ActivityLogger;
@@ -19,13 +19,13 @@ pub struct AppInfo {
 }
 
 impl std::fmt::Display for AppInfo {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "App: {} | Window: {} | Bundle: {} | PID: {}",
-             self.app_name,
-             self.window_title,
-             self.bundle_id,
-             self.process_id)
-  }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "App: {} | Window: {} | Bundle: {} | PID: {}",
+            self.app_name, self.window_title, self.bundle_id, self.process_id
+        )
+    }
 }
 
 //MonitorError
@@ -47,7 +47,7 @@ impl std::fmt::Display for MonitorError {
 
 impl std::error::Error for MonitorError {}
 
-//Utils 
+//Utils
 //
 unsafe fn nsstring_to_string(ns_string_ptr: *const NSString, fallback: &str) -> String {
     if ns_string_ptr.is_null() {
@@ -57,23 +57,26 @@ unsafe fn nsstring_to_string(ns_string_ptr: *const NSString, fallback: &str) -> 
     }
 }
 
-fn frontmost_application_to_app_info(frontmost_application: Option<objc2::rc::Retained<objc2_app_kit::NSRunningApplication>>) -> Result<AppInfo, MonitorError> {
+fn frontmost_application_to_app_info(
+    frontmost_application: Option<objc2::rc::Retained<objc2_app_kit::NSRunningApplication>>,
+) -> Result<AppInfo, MonitorError> {
     unsafe {
         let application = frontmost_application.ok_or(MonitorError::NoActiveApp)?;
 
         let application_name: *const NSString = msg_send![&*application, localizedName];
         let bundle_id: *const NSString = msg_send![&*application, bundleIdentifier];
         let process_id: i32 = msg_send![&*application, processIdentifier];
-        let window_title = format!("{} - Window", nsstring_to_string(application_name, "Unknown Application"));
+        let window_title = format!(
+            "{} - Window",
+            nsstring_to_string(application_name, "Unknown Application")
+        );
 
         Ok(AppInfo {
             app_name: nsstring_to_string(application_name, "Unknown Application"),
             bundle_id: nsstring_to_string(bundle_id, "Unknown Bundle Id"),
             process_id: process_id,
             window_title: window_title,
-            
         })
-
     }
 }
 
@@ -98,14 +101,21 @@ pub struct MonitorConfig {
 
 impl Default for MonitorConfig {
     fn default() -> Self {
-        Self { poll_interval_ms: 1000, runloop_timeout: 0.1 }
+        Self {
+            poll_interval_ms: 1000,
+            runloop_timeout: 0.1,
+        }
     }
 }
 
-
 //Function
-pub async fn start_monitoring<F>(config: MonitorConfig, mut logger: ActivityLogger, callback: F) -> Result<(), MonitorError> 
-where F: Fn(&AppInfo),
+pub async fn start_monitoring<F>(
+    config: MonitorConfig,
+    mut logger: ActivityLogger,
+    callback: F,
+) -> Result<(), MonitorError>
+where
+    F: Fn(&AppInfo),
 {
     let mut last_application: Option<AppInfo> = None;
 
@@ -128,7 +138,6 @@ where F: Fn(&AppInfo),
                 }
             }
             Err(e) => eprintln!("Error while monitoring: {}", e),
-            
         }
 
         tokio::time::sleep(Duration::from_millis(config.poll_interval_ms)).await;
@@ -137,5 +146,4 @@ where F: Fn(&AppInfo),
             CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, config.runloop_timeout, true);
         }
     }
-    
 }

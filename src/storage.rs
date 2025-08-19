@@ -1,17 +1,17 @@
-use chrono::{DateTime, Utc};
-use sqlx::{SqlitePool, Row};
 use crate::monitor::AppInfo;
+use chrono::{DateTime, Utc};
+use sqlx::{Row, SqlitePool};
 
 #[derive(Debug, Clone)]
 pub struct ActivitySession {
     pub id: Option<i64>,
     pub application_name: String,
     pub bundle_id: String,
-    pub window_title:String,
+    pub window_title: String,
     pub process_id: i32,
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
-    pub duration_seconds: Option<i64>, 
+    pub duration_seconds: Option<i64>,
 }
 
 #[derive(Debug)]
@@ -27,20 +27,19 @@ impl std::fmt::Display for StorageError {
             StorageError::SessionNotFound => write!(f, "Session not found"),
         }
     }
-    
 }
 
 impl std::error::Error for StorageError {}
 
 impl From<sqlx::Error> for StorageError {
-    fn from(err : sqlx::Error) -> Self {
+    fn from(err: sqlx::Error) -> Self {
         StorageError::DatabaseError(err)
     }
 }
 
 pub struct ActivityLogger {
     pool: SqlitePool,
-    current_session_id: Option<i64>
+    current_session_id: Option<i64>,
 }
 
 impl ActivityLogger {
@@ -48,12 +47,15 @@ impl ActivityLogger {
         let pool = SqlitePool::connect(database_url).await?;
         Self::create_tables(&pool).await?;
 
-        Ok(Self { pool, current_session_id: None })
+        Ok(Self {
+            pool,
+            current_session_id: None,
+        })
     }
 
     async fn create_tables(pool: &SqlitePool) -> Result<(), StorageError> {
         sqlx::query(
-        r#"
+            r#"
         CREATE TABLE IF NOT EXISTS activity_sessions (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               app_name TEXT NOT NULL,
@@ -64,8 +66,10 @@ impl ActivityLogger {
               end_time TEXT,
               duration_seconds INTEGER,
               created_at TEXT DEFAULT CURRENT_TIMESTAMP
-          )"#
-        ).execute(pool).await?;
+          )"#,
+        )
+        .execute(pool)
+        .await?;
         Ok(())
     }
 
@@ -95,27 +99,29 @@ impl ActivityLogger {
     }
 
     pub async fn end_session(&mut self) -> Result<(), StorageError> {
-        let session_id = self.current_session_id.ok_or(StorageError::SessionNotFound)?;
+        let session_id = self
+            .current_session_id
+            .ok_or(StorageError::SessionNotFound)?;
 
         let now = Utc::now();
 
         let row = sqlx::query("SELECT start_time FROM activity_sessions WHERE id = ?")
-          .bind(session_id)
-          .fetch_one(&self.pool)
-          .await?; 
+            .bind(session_id)
+            .fetch_one(&self.pool)
+            .await?;
         let start_time_str: String = row.get("start_time");
         let start_time = DateTime::parse_from_rfc3339(&start_time_str)
-          .map_err(|e| StorageError::DatabaseError(sqlx::Error::Decode(Box::new(e))))?
-          .with_timezone(&Utc);
+            .map_err(|e| StorageError::DatabaseError(sqlx::Error::Decode(Box::new(e))))?
+            .with_timezone(&Utc);
 
         let duration_seconds = (now - start_time).num_seconds();
 
         sqlx::query(
-          r#"
+            r#"
           UPDATE activity_sessions
           SET end_time = ?, duration_seconds = ?
           WHERE id = ?
-          "#
+          "#,
         )
         .bind(now.to_rfc3339())
         .bind(duration_seconds)
@@ -126,7 +132,5 @@ impl ActivityLogger {
         self.current_session_id = None;
 
         Ok(())
-        
     }
-
 }
